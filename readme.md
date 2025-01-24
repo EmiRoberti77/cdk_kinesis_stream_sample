@@ -1,161 +1,160 @@
-# Kinesis Data Stream and Usage Guide
+# Kinesis Data Stream Development with AWS CDK and Lambda
 
-Amazon Kinesis Data Streams is a real-time data streaming service provided by AWS. It is commonly used for real-time analytics, application monitoring, log aggregation, and more.
+This document provides an overview of setting up a Kinesis Data Stream with AWS CDK and integrating it with a Lambda function for processing records. The examples include:
 
-This guide explains how to use the AWS SDK for JavaScript (v3) in TypeScript to interact with a Kinesis Data Stream by adding records to the stream.
-
-## Prerequisites
-
-1. **AWS SDK for JavaScript (v3)**:
-
-   - Install the SDK by running:
-     ```bash
-     npm install @aws-sdk/client-kinesis
-     ```
-
-2. **Kinesis Data Stream**:
-
-   - Ensure you have created a Kinesis Data Stream in your AWS account.
-   - Note down the stream name and region.
-
-3. **AWS Credentials**:
-   - Configure your AWS credentials using the AWS CLI or environment variables.
+- Sending records to the Kinesis Data Stream.
+- Creating an AWS CDK stack for the stream and Lambda integration.
+- Writing a Lambda function to process the records.
 
 ---
 
-## Code Example
+## Sending Records to Kinesis Data Stream
 
-Below is an example TypeScript code to add a record to a Kinesis Data Stream.
+The following TypeScript code demonstrates how to send records to a Kinesis Data Stream. The record includes a random name, timestamp, and message, all of which are JSON-encoded.
 
 ```typescript
 import { KinesisClient, PutRecordCommand } from "@aws-sdk/client-kinesis";
-
-// Initialize the Kinesis client
 const kinesisClient = new KinesisClient({
-  region: "us-east-1", // Replace with your AWS region
+  region: "us-east-1",
 });
 
-/**
- * Adds a record to the specified Kinesis Data Stream.
- *
- * @param streamName - The name of the Kinesis Data Stream.
- * @param data - The data to send to the stream.
- * @param partitionKey - The partition key to determine the shard for the record.
- * @returns A Promise with the response from the PutRecord API.
- */
 async function addRecordToKinesis(
   streamName: string,
   data: string,
   partitionKey: string
 ): Promise<any> {
   try {
-    // Convert the data to binary format
     const encodedData = Buffer.from(data);
-
-    // Create the PutRecordCommand
     const putRecord = new PutRecordCommand({
       StreamName: streamName,
       Data: encodedData,
       PartitionKey: partitionKey,
     });
 
-    // Send the record to the Kinesis stream
     const response = await kinesisClient.send(putRecord);
-    console.log("Record added successfully:", response);
+    console.log(response);
     return response;
   } catch (err: any) {
-    console.error("Error adding record to Kinesis stream:", err.message);
+    console.log(err.message);
     return undefined;
   }
 }
 
-// Example usage
-const streamName = "emi-kinesis-stream"; // Replace with your stream name
-const data = "Hello, Emi"; // Example data payload
-const partitionKey = "PartitionKey1"; // Partition key for routing
+const random = Math.floor(Math.random() * 1000);
+const now = new Date().toISOString();
+const streamName = "emi-kinesis-stream";
+const data = JSON.stringify({
+  name: "emi" + random,
+  timeStamp: now,
+  message: "kinesis message",
+});
+const partitionKey = "PartitionKey1";
 
 addRecordToKinesis(streamName, data, partitionKey).catch((err) =>
-  console.error("Error in example usage:", err)
+  console.log(err)
 );
 ```
 
 ---
 
-## Explanation of Key Components
+## AWS CDK Stack for Kinesis and Lambda Integration
 
-### 1. **KinesisClient**
+The following AWS CDK code sets up a Kinesis Data Stream and a Lambda function. It integrates the Lambda function with the Kinesis stream using an event source mapping.
 
-The `KinesisClient` is initialized with the AWS region where your Kinesis Data Stream is located.
+```typescript
+import * as cdk from "aws-cdk-lib";
+import { Construct } from "constructs";
+import { Stream, StreamMode } from "aws-cdk-lib/aws-kinesis";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { Runtime, StartingPosition } from "aws-cdk-lib/aws-lambda";
+import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { KinesisEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import * as path from "path";
 
-### 2. **PutRecordCommand**
+export class CdkKinesisStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
 
-This command is used to send a single record to a Kinesis Data Stream. It requires:
+    const stream = new Stream(this, "emi_cdk_stream", {
+      streamName: "emi-kinesis-stream",
+      streamMode: StreamMode.ON_DEMAND,
+    });
 
-- **StreamName**: The name of the Kinesis Data Stream.
-- **Data**: The data payload in binary format (converted using `Buffer.from`).
-- **PartitionKey**: A key to determine the shard where the record will be stored.
+    const targetKinesisLambda = new NodejsFunction(
+      this,
+      "emi_cdk_kinesis_target_lambda",
+      {
+        functionName: "emi_cdk_kinesis_target_lambda",
+        runtime: Runtime.NODEJS_18_X,
+        handler: "handler",
+        entry: path.join(
+          __dirname,
+          "..",
+          "src",
+          "lambdas",
+          "lambda_kinesis_target",
+          "handler.ts"
+        ),
+      }
+    );
 
-### 3. **Error Handling**
+    stream.grantReadWrite(targetKinesisLambda);
 
-The `try-catch` block for any errors during the API call are logged and handled gracefully.
+    targetKinesisLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["*"],
+        resources: ["*"],
+        effect: Effect.ALLOW,
+      })
+    );
 
----
-
-## IAM Permissions
-
-Ensure the AWS identity (user or role) running the code has the following permission:
-
-```json
-{
-  "Effect": "Allow",
-  "Action": "kinesis:PutRecord",
-  "Resource": "arn:aws:kinesis:<region>:<account-id>:stream/<stream-name>"
+    targetKinesisLambda.addEventSource(
+      new KinesisEventSource(stream, {
+        startingPosition: StartingPosition.LATEST,
+        batchSize: 100,
+        enabled: true,
+      })
+    );
+  }
 }
 ```
 
 ---
 
-## Output
+## Lambda Function for Processing Kinesis Records
 
-If successful, the response will include:
+The Lambda function below processes records from the Kinesis Data Stream. It decodes the Base64-encoded data, parses it as JSON, and logs the payload.
 
-- `ShardId`: The shard where the record was added.
-- `SequenceNumber`: A unique identifier for the record.
+```typescript
+import { KinesisStreamEvent, KinesisStreamRecord } from "aws-lambda";
 
-Example:
-
-```json
-{
-  "ShardId": "shardId-000000000001",
-  "SequenceNumber": "49659891250263205584801854121677320731210653829945098258",
-  "EncryptionType": "KMS"
-}
+export const handler = async (event: KinesisStreamEvent): Promise<void> => {
+  for (const record of event.Records) {
+    const { partitionKey, sequenceNumber } = record.kinesis;
+    console.log(
+      `[partitionKey=${partitionKey}]:[sequenceNumber=${sequenceNumber}]`
+    );
+    const payload = Buffer.from(record.kinesis.data, "base64").toString(
+      "utf-8"
+    );
+    try {
+      const decodedPayload = JSON.parse(payload);
+      console.log(decodedPayload);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+};
 ```
 
 ---
 
-## Additional Notes
+## Summary
 
-1. **Partition Key**:
+This setup demonstrates how to:
 
-   - Records with the same partition key are routed to the same shard.
+1. Send data to a Kinesis Data Stream.
+2. Use AWS CDK to create and configure the stream and a Lambda function.
+3. Process the Kinesis stream records in a Lambda function.
 
-2. **Data Encoding**:
-
-   - Kinesis requires the `Data` field in binary format. Use `Buffer.from()` to convert strings.
-
-3. **Batch Processing**:
-   - For better performance, consider using `PutRecordsCommand` to send multiple records in one API call.
-
----
-
-<img width="904" alt="Screenshot 2025-01-24 at 15 31 54" src="https://github.com/user-attachments/assets/f480d674-735e-4bf0-aa6c-61667e5f337f" />
-
-
-
-## References
-
-- [AWS Kinesis Data Streams Documentation](https://docs.aws.amazon.com/kinesis/latest/dev/introduction.html)
-- [AWS SDK for JavaScript (v3) Documentation](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/index.html)
-
-Emi Roberti - Happy coding
+With this architecture, you can handle real-time streaming data and integrate it into your applications effectively.
