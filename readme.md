@@ -97,7 +97,7 @@ This command is used to send a single record to a Kinesis Data Stream. It requir
 
 ### 3. **Error Handling**
 
-The `try-catch` block ensures any errors during the API call are logged and handled gracefully.
+The `try-catch` block for any errors during the API call are logged and handled gracefully.
 
 ---
 
