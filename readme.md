@@ -8,6 +8,51 @@ This document provides an overview of setting up a Kinesis Data Stream with AWS 
 
 ---
 
+## Project Setup
+
+To create and manage the infrastructure using AWS CDK, follow these steps:
+
+### Install AWS CDK
+
+Ensure you have the AWS CDK installed globally:
+
+```bash
+npm install -g aws-cdk
+```
+
+### Initialise the CDK Project
+
+Run the following command to create a new CDK project:
+
+```bash
+cdk init app --language=typescript
+```
+
+This will create a basic file structure for your CDK project.
+
+### File Structure
+
+Below is the file structure for this example, including where the Lambda functions are stored:
+
+```
+project-root/
+├── bin/
+│   └── cdk-kinesis.ts           # Entry point for the CDK app
+├── lib/
+│   └── cdk-kinesis-stack.ts     # Stack definition for Kinesis and Lambda
+├── src/
+│   └── lambdas/
+│       └── lambda_kinesis_target/
+│           └── handler.ts       # Lambda handler for processing Kinesis records
+├── node_modules/                # Node.js dependencies
+├── package.json                 # Project dependencies
+├── cdk.json                     # CDK project configuration
+├── tsconfig.json                # TypeScript configuration
+└── README.md                    # Documentation for the project
+```
+
+---
+
 ## Sending Records to Kinesis Data Stream
 
 The following TypeScript code demonstrates how to send records to a Kinesis Data Stream. The record includes a random name, timestamp, and message, all of which are JSON-encoded.
