@@ -1,7 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { Stream, StreamMode } from "aws-cdk-lib/aws-kinesis";
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class CdkKinesisStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
