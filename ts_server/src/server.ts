@@ -32,7 +32,7 @@ const streamName = "emi-kinesis-stream";
 const data = JSON.stringify({
   name: "emi" + random,
   timeStamp: now,
-  path: "s3://emibucketname/",
+  message: "kinesis message",
 });
 const partitionKey = "PartitionKey1";
 
