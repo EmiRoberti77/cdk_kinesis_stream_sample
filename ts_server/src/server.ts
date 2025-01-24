@@ -1,4 +1,5 @@
 import { KinesisClient, PutRecordCommand } from "@aws-sdk/client-kinesis";
+import { timeStamp } from "console";
 const kinesisClient = new KinesisClient({
   region: "us-east-1",
 });
@@ -25,9 +26,14 @@ async function addRecordToKinesis(
   }
 }
 
-// Example usage
+const random = Math.floor(Math.random() * 1000);
+const now = new Date().toISOString();
 const streamName = "emi-kinesis-stream";
-const data = "Hello, Emi";
+const data = JSON.stringify({
+  name: "emi" + random,
+  timeStamp: now,
+  path: "s3://emibucketname/",
+});
 const partitionKey = "PartitionKey1";
 
 addRecordToKinesis(streamName, data, partitionKey).catch((err) =>
