@@ -164,6 +164,10 @@ export class CdkKinesisStack extends cdk.Stack {
 }
 ```
 
+## Lambda triggered by Kinesis Event Source
+
+<img width="749" alt="Screenshot 2025-01-24 at 18 15 26" src="https://github.com/user-attachments/assets/6f227d05-0919-4aea-952b-fa4662c5ab05" />
+
 ---
 
 ## Lambda Function for Processing Kinesis Records
@@ -191,6 +195,10 @@ export const handler = async (event: KinesisStreamEvent): Promise<void> => {
   }
 };
 ```
+
+## out put in the CloudWatch
+
+<img width="1148" alt="Screenshot 2025-01-24 at 18 14 05" src="https://github.com/user-attachments/assets/2ed834ca-959e-462f-b4f2-00a3001deec2" />
 
 ---
 
