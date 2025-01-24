@@ -149,6 +149,10 @@ Example:
 
 ---
 
+<img width="904" alt="Screenshot 2025-01-24 at 15 31 54" src="https://github.com/user-attachments/assets/f480d674-735e-4bf0-aa6c-61667e5f337f" />
+
+
+
 ## References
 
 - [AWS Kinesis Data Streams Documentation](https://docs.aws.amazon.com/kinesis/latest/dev/introduction.html)
